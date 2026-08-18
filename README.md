@@ -4,9 +4,9 @@ Two Telegraph canonical intents that had no miner at all, served by one Cloudfla
 Worker with no API key and no database. Every figure is read live at request time from
 public sources, so nothing can silently go stale.
 
-- **TOKEN_HOLDER_COUNT** — how many distinct addresses hold a token, from the public
+- **TOKEN_HOLDER_COUNT**: how many distinct addresses hold a token, from the public
   Blockscout API. Ethereum, Base, Arbitrum, Polygon.
-- **WALLET_BALANCE_CHECK** — the native-coin balance of an address or ENS name, from
+- **WALLET_BALANCE_CHECK**: the native-coin balance of an address or ENS name, from
   `eth_getBalance` over public RPCs. Ethereum, Base, Arbitrum, Optimism, Polygon and the
   Base Sepolia and Sepolia testnets. ENS names resolve on mainnet.
 
@@ -24,7 +24,7 @@ curl -s "https://telegraph-chain.margyn.workers.dev/holders?chain=ethereum&token
 Both were canonical on the network with zero miners, so an agent asking either question
 got nothing back. Filling an unserved intent is rank 1 for that intent by default, which
 is the honest way to earn routed demand rather than fighting ten wrappers for a crowded
-one. Both are on-chain reads, which the program calls its highest-value area, and both
+one. Both are on-chain reads, which the program calls its highest-value area. Both
 return a single figure a validator can score against ground truth.
 
 ## How it answers
@@ -34,10 +34,10 @@ way against the live node:
 
 - **Providers are raced, not tried in turn.** A validator spot check has a deadline, so
   one slow public RPC must not spend it. `Promise.any` across two endpoints per chain.
-- **A ten second per-isolate memo.** A hot answer costs milliseconds, and staleness is
+- **A ten second per-isolate memo.** A hot answer costs milliseconds. Staleness is
   bounded at the same ten seconds the response advertises.
 - **An unfilled path template answers rather than errors.** The node probes declared
-  paths with the template left in (`/holders/{chain}/{token}`), and a 400 on that probe
+  paths with the template left in (`/holders/{chain}/{token}`). A 400 on that probe
   reads as "miner did not respond" and freezes the miner out of routing for a whole
   epoch. So `{token}` resolves to USDC and `{address}` to the zero address, each a valid
   200, while a genuinely unknown input still 400s.
@@ -72,8 +72,8 @@ Registered on Base Sepolia against the Telegraph registry
 
 ## Layout
 
-- `worker.js` — the whole miner, one Cloudflare Worker module.
-- `chainwire-holder-count.yaml`, `chainwire-wallet-balance.yaml` — the two descriptors.
+- `worker.js`: the whole miner, one Cloudflare Worker module.
+- `chainwire-holder-count.yaml`, `chainwire-wallet-balance.yaml`: the two descriptors.
 
 Written for Telegraph Hackathon Season I, Track 1, by
 [zkasuran](https://github.com/zkasuran) with AI assistance (Claude, Anthropic). Every
