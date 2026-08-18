@@ -1,0 +1,130 @@
+version: "1"
+kind: miner
+id: 7302
+slug: chainwire-holder-count
+protocol: generic
+name: ChainWire Token Holder Count
+description: >
+  Distinct holder-address count for an ERC-20 token on a named EVM chain, read live
+  from the public Blockscout API at request time. Answers the TOKEN_HOLDER_COUNT
+  intent for Ethereum, Base, Arbitrum and Polygon. Give it a contract address or a
+  known symbol; the figure is Blockscout's own holders_count, no API key and nothing
+  cached that can silently go stale.
+base_url: https://telegraph-chain.margyn.workers.dev
+
+docs:
+  documentation: https://telegraph-chain.margyn.workers.dev/
+
+limitations:
+  - code: MAX_PARAM_VALUE
+    message: chain must be one of ethereum, base, arbitrum, polygon (the chains with a public Blockscout instance). Token is a 0x contract address or a known symbol.
+    param: chain
+    property: length
+    value_num: 40
+    operator: lte
+
+rate_limit_per_sec: 20
+cache_ttl_sec: 10
+circuit_threshold: 5
+circuit_cooldown_seconds: 30
+
+input_schema:
+  type: object
+  properties:
+    chain:
+      type: string
+      description: EVM chain name, one of ethereum, base, arbitrum, polygon.
+    token:
+      type: string
+      description: ERC-20 contract address (0x...) or a known symbol such as USDC, USDT, DAI, WETH.
+  required:
+    - chain
+    - token
+
+output_schema:
+  type: object
+  properties:
+    chain:
+      type: string
+      description: Canonical chain name the answer refers to.
+    chain_id:
+      type: integer
+      description: EVM chain id.
+    contract_address:
+      type: string
+      description: The token contract the count is for.
+    symbol:
+      type: string
+      description: Token symbol as reported by the explorer.
+    holders:
+      type: integer
+      description: Number of distinct addresses holding the token.
+    confidence:
+      type: number
+      description: 0.95, an explorer-reported figure that drifts block to block.
+    summary:
+      type: string
+      description: One sentence naming the token, the chain and the holder count.
+    source:
+      type: string
+      description: Which Blockscout instance produced the figure.
+    as_of:
+      type: string
+      description: ISO 8601 timestamp of the read.
+
+endpoints:
+  - path: /holders
+    external_path: /holders
+    method: GET
+    description: >
+      Holder count for one token, chain and token as query parameters
+      (?chain=base&token=usdc). Also accepts a whole question in ?query=.
+  - path: /holders/{chain}/{token}
+    external_path: /holders/{chain}/{token}
+    method: GET
+    description: >
+      Same answer with chain and token in the path. An unsubstituted template
+      resolves to ethereum rather than erroring.
+
+semantics:
+  signal_mapping:
+    confidence_field: confidence
+    label_field: symbol
+    reason_field: summary
+  supported_intents:
+    - TOKEN_HOLDER_COUNT
+
+on_chain:
+  transform: direct
+  min_price_usdc: 0.01
+  fields:
+    strings:
+      - index: 0
+        name: chain
+        description: Canonical chain name the answer refers to.
+        source_path: chain
+      - index: 1
+        name: contract_address
+        description: The token contract the holder count is for.
+        source_path: contract_address
+      - index: 2
+        name: summary
+        description: One sentence naming the token, the chain and the holder count.
+        source_path: summary
+    integers:
+      - index: 0
+        name: holders
+        description: Number of distinct addresses holding the token.
+        source_path: holders
+        multiplier: 1
+      - index: 1
+        name: chain_id
+        description: EVM chain id of the network.
+        source_path: chain_id
+        multiplier: 1
+  request:
+    - endpoint: holders
+      method: GET
+      query_params:
+        chain: { source: strings.0 }
+        token: { source: strings.1 }
